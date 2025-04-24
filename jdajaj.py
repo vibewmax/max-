@@ -10,10 +10,32 @@ st.set_page_config(
     layout="centered"
 )
 
-# Стилізація
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+# Вбудовані CSS стилі (без зовнішнього файлу)
+def set_css():
+    st.markdown("""
+    <style>
+        .stTextInput input, .stTextInput label, .stPassword input, .stPassword label {
+            color: #4a4a4a;
+        }
+        .stButton>button {
+            background-color: #4a8cff;
+            color: white;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: #3a7bd5;
+            color: white;
+        }
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+            color: #4a8cff;
+        }
+        .stAlert {
+            border-radius: 5px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Завантаження користувачів
 def load_users():
@@ -35,24 +57,6 @@ def save_users(users):
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Головна функція
-def main():
-    # Завантажуємо CSS
-    local_css("style.css")
-    
-    # Ініціалізація стану сесії
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'users' not in st.session_state:
-        st.session_state.users = load_users()
-    
-    # Якщо користувач авторизований - показуємо сторінку проекту
-    if st.session_state.authenticated:
-        show_project_page()
-    else:
-        # Інакше показуємо сторінку авторизації
-        show_auth_page()
-
 # Сторінка авторизації
 def show_auth_page():
     st.title("🔐 Система авторизації")
@@ -72,7 +76,8 @@ def show_auth_page():
                     st.error("Будь ласка, заповніть всі поля")
                 else:
                     hashed_password = hash_password(password)
-                    if username in st.session_state.users and st.session_state.users[username] == hashed_password:
+                    users = load_users()
+                    if username in users and users[username] == hashed_password:
                         st.session_state.authenticated = True
                         st.session_state.current_user = username
                         st.rerun()
@@ -92,13 +97,15 @@ def show_auth_page():
                     st.error("Будь ласка, заповніть всі поля")
                 elif new_password != confirm_password:
                     st.error("Паролі не співпадають")
-                elif new_username in st.session_state.users:
-                    st.error("Користувач з таким іменем вже існує")
                 else:
-                    hashed_password = hash_password(new_password)
-                    st.session_state.users[new_username] = hashed_password
-                    save_users(st.session_state.users)
-                    st.success("Реєстрація пройшла успішно. Тепер ви можете увійти.")
+                    users = load_users()
+                    if new_username in users:
+                        st.error("Користувач з таким іменем вже існує")
+                    else:
+                        hashed_password = hash_password(new_password)
+                        users[new_username] = hashed_password
+                        save_users(users)
+                        st.success("Реєстрація пройшла успішно. Тепер ви можете увійти.")
 
 # Сторінка проекту
 def show_project_page():
@@ -108,7 +115,14 @@ def show_project_page():
     st.markdown("""
     **Курсант:** НН4-23-203  
     **Курсовий проект на тему:**  
-    "Розробка системи авторизації користувачів у GUI"
+    "Розробка системи авторизації користувачів"
+    
+    Цей проект демонструє створення сучасної системи авторизації
+    з використанням Python та Streamlit. Система включає:
+    - Реєстрацію нового користувача
+    - Вхід в систему
+    - Зберігання даних у зашифрованому вигляді
+    - Сучасний веб-інтерфейс
     
     Ви успішно авторизувалися в системі!
     """)
@@ -116,17 +130,24 @@ def show_project_page():
     # Кнопка виходу
     if st.button("Вийти з системи"):
         st.session_state.authenticated = False
-        del st.session_state.current_user
+        if 'current_user' in st.session_state:
+            del st.session_state.current_user
         st.rerun()
+
+# Головна функція
+def main():
+    # Встановлюємо CSS стилі
+    set_css()
     
-    # Додаткова інформація
-    st.markdown("---")
-    st.markdown("### Додаткова інформація")
-    st.markdown("""
-    - Використані технології: Python, Streamlit, SHA-256
-    - Дані зберігаються у файлі `users.json`
-    - Паролі хешуються перед збереженням
-    """)
+    # Ініціалізація стану сесії
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    
+    # Вибір сторінки для відображення
+    if st.session_state.authenticated:
+        show_project_page()
+    else:
+        show_auth_page()
 
 if __name__ == "__main__":
     main()
