@@ -1,5 +1,5 @@
 import streamlit as st
-import bcrypt
+import hashlib
 import json
 import os
 
@@ -18,13 +18,8 @@ def save_users(users):
         json.dump(users, f)
 
 # Хешування паролю
-def hash_password(raw_password):
-    hashed = bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt())
-    return hashed.decode("utf-8")
-
-# Перевірка паролю
-def verify_password(raw_password, hashed_password):
-    return bcrypt.checkpw(raw_password.encode("utf-8"), hashed_password.encode("utf-8"))
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 # Реєстрація
 def register_user(username, password):
@@ -40,15 +35,15 @@ def login_user(username, password):
     users = load_users()
     if username not in users:
         return False, "Користувача не знайдено."
-    if verify_password(password, users[username]):
+    if users[username] == hash_password(password):
         return True, "Вхід успішний!"
     else:
         return False, "Невірний пароль."
 
-# Основна функція GUI
+# Головна функція
 def main():
     st.set_page_config(page_title="Авторизація", page_icon="🔐")
-    st.title("🔐 Система авторизації")
+    st.title("🔐 Авторизація користувача")
 
     menu = ["Вхід", "Реєстрація"]
     choice = st.sidebar.selectbox("Меню", menu)
@@ -69,7 +64,7 @@ def main():
                 st.session_state.username = username
 
     elif choice == "Реєстрація":
-        st.subheader("Створити обліковий запис")
+        st.subheader("Реєстрація")
         new_user = st.text_input("Нове ім'я користувача")
         new_password = st.text_input("Новий пароль", type="password")
         if st.button("Зареєструватися"):
@@ -77,7 +72,7 @@ def main():
             st.info(msg)
 
     if st.session_state.logged_in:
-        st.success(f"👋 Привіт, {st.session_state.username}!")
+        st.success(f"👋 Вітаю, {st.session_state.username}!")
         if st.button("Вийти"):
             st.session_state.logged_in = False
             st.session_state.username = ""
